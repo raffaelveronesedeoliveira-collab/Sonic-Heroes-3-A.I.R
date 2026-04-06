@@ -1,0 +1,43 @@
+function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
+{
+    // We check if the current object is actually one of the character slots (P1, P2 or P3)
+    // This prevents bridges, emeralds, and monitors from being affected
+    if (A0 == 0xffffb000 || A0 == 0xffffb04a || A0 == 0xffffc2ca)
+    {
+        if (u8[A0 + 0x38] == CHARACTER_TAILS)
+        {
+            // If it is Player 1, use Palette Line 0 (Sonic/Leader)
+            if (A0 == 0xffffb000)
+            {
+                objA0.sprite_attributes &= ~0x6000
+            }
+            // If it is P2 or P3 (Heroes), use Palette Line 1 (Tails/Follower)
+            else
+            {
+                objA0.sprite_attributes &= ~0x6000
+                objA0.sprite_attributes |= 0x2000
+            }
+        }
+    }
+
+    // If it is NOT a character slot, the game follows the object's original palette
+    // This way bridges and emeralds return to normal.
+    return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+}
+
+//# address-hook(0x001544) end(0x001582)
+function void loadCharacterPalette(u8 character, u32 targetAddress, u8 paletteVariant)
+{
+    // 1. Save original bridge/background colors before applying the skin
+    // Tails' Palette Line 1 starts at 0x802180.
+    
+    // 2. Call the base function to load the Tails skin
+    base.loadCharacterPalette(character, targetAddress, paletteVariant)
+
+    // 3. CORRECTION: If it is Tails, we restore colors used by the scenery 
+    // that Tails does not use.
+    if (character == CHARACTER_TAILS)
+    {
+        // Add your specific color restoration logic here if needed
+    }
+}

@@ -1,0 +1,163 @@
+//# address-hook(0x013d4a) end(0x013ec8)
+function void fn013d4a()
+{
+	if (u8[0xffffb005] >= 0x06)
+	{
+		tails.ai_routine = 0x04
+		char.spindash = 0
+		char.spindash_charge = 0
+		char.control_flags = 0x81
+		char.flags = char.flag.IN_AIR
+		char.state = char.state.TAILS_FLYDOWN
+		return
+	}
+
+	fn013efc()
+
+	if (tails.control_counter == 0 && (u8[A0 + 0x2e] & 0x80) == 0 && (u8[A1 + 0x37] & 0x80) == 0)
+	{
+		if (char.hlock_countdown != 0 && char.groundspeed == 0)
+		{
+			tails.ai_routine = 0x08
+		}
+
+// Check if Player 2 is Sonic (0x00) or Knuckles (0x02)
+if (A0 == 0xffffb000)
+	{
+		D0.u8 = posbackup.offset.player1
+		return
+	}
+
+	// 2. Lógica para o Player 3 / Heroes (Slot 0xffffc2ca)
+	// Se estiver no slot extra, usamos o delay curto (estilo Tails)
+	if (A0 == 0xffffc2ca)
+	{
+		D0.u8 = posbackup.offset.player1 - 0x28
+	}
+	// 3. Lógica para o Player 2 Normal (Slot 0xffffb04a)
+	else if (A0 == 0xffffb04a)
+	{
+		// Se o personagem no P2 estiver usando o código de "Humano" ou "IA de Knuckles"
+		// (Isso identifica Sonic/Knuckles sem precisar do char_id)
+		if (objA0.update_address == 0x010a94 || objA0.update_address == 0x016444)
+		{
+			// Delay longo (0x38)
+			D0.u8 = posbackup.offset.player1 - 0x38
+		}
+		// Se o endereço for 0x01365c (IA do Tails), ele cai no else:
+		else
+		{
+			// Delay curto (0x28)
+			D0.u8 = posbackup.offset.player1 - 0x28
+		}
+	}
+		u16 targetPosX = u16[0xffffe500 + D0.u8]
+		u16 targetPosY = u16[0xffffe500 + D0.u8 + 2]
+		u16 controlBackup = u16[0xffffe400 + D0.u8]
+		u8 flagsBackup = u8[0xffffe400 + D0.u8 + 2]
+	#if STANDALONE
+		// Make Tails account for Sonic's speed just enough he won't fall behind in AIZ 2 bombing section
+		targetPosX += (s16[A1 + 0x18] >> 7)
+	#endif
+
+		if ((u8[A1 + 0x2a] & 0x08) == 0 && s16[A1 + 0x1c] < 0x400)
+		{
+			// Prefer to stand left, not directly behind main character
+			targetPosX -= 0x20
+		}
+		s16 relativeTargetPosX = targetPosX - char.position.x.u16
+
+		control.tails = controlBackup
+		if ((char.flags & char.flag.PUSHING) && ((flagsBackup & char.flag.PUSHING) == 0))
+		{
+			// Jump over obstacle
+		#if STANDALONE
+			// Do not jump if target position is close anyways
+			if (abs(relativeTargetPosX) >= 0x30)
+		#endif
+			if ((level.framecounter.low & 0x3f) == 0 && char.state != char.state.COWERING)
+			{
+				control.tails |= 0x7070
+				tails.ai_jumping = 1
+			}
+		}
+		else
+		{
+			if (relativeTargetPosX == 0)
+			{
+				char.flags = (char.flags & ~char.flag.FACING_LEFT) | (flagsBackup & char.flag.FACING_LEFT)
+			}
+			else
+			{
+				if (relativeTargetPosX < 0)
+				{
+					if (relativeTargetPosX <= -0x30)
+					{
+						control.tails = (control.tails & 0xf3f3) | 0x0404		// Move left
+					}
+
+					if (char.groundspeed != 0 && (char.flags & char.flag.FACING_LEFT) != 0 && (char.control_flags & 0x01) == 0)
+					{
+						--char.position.x.u16
+					}
+				}
+				else
+				{
+					if (relativeTargetPosX >= 0x30)
+					{
+						control.tails = (control.tails & 0xf3f3) | 0x0808		// Move right
+					}
+
+					if (char.groundspeed != 0 && (char.flags & char.flag.FACING_LEFT) == 0 && (char.control_flags & 0x01) == 0)
+					{
+						++char.position.x.u16
+					}
+				}
+			}
+
+			if (tails.ai_jumping != 0)
+			{
+				control.tails |= 0x7000
+				if (char.flags & char.flag.IN_AIR)
+					return
+
+				tails.ai_jumping = 0
+			}
+
+			if ((level.framecounter & 0xff) == 0 || abs(relativeTargetPosX) < 0x40)
+			{
+				s16 relativeTargetPosY = targetPosY - char.position.y.u16
+				if (relativeTargetPosY <= -0x20)
+				{
+					if (((level.framecounter.low & 0x3f) == 0) && (char.state != char.state.COWERING))
+					{
+						control.tails |= 0x7070
+						tails.ai_jumping = 1
+					}
+				}
+			}
+
+		#if STANDALONE
+			// If both are standing still horizontally... (which includes spindash charging)
+			if (char.velocity.x == 0 && objA1.velocity.x == 0)
+			{
+				// Make sure Tails looks into the same direction as the main player
+				if ((objA0.flags2a & char.flag.FACING_LEFT) != (objA1.flags2a & char.flag.FACING_LEFT))
+				{
+					objA0.flags2a = (objA0.flags2a & ~char.flag.FACING_LEFT) | (objA1.flags2a & char.flag.FACING_LEFT)
+				}
+
+				// Start charging a spindash if the main player does so as well
+				if (char.spindash == 0 && u8[A1 + 0x3d] != 0 && char.state == char.state.COWERING)
+				{
+					control.tails |= 0x0020
+				}
+			}
+		#endif
+		}
+	}
+	else if (tails.control_counter != 0)
+	{
+		--tails.control_counter
+	}
+}

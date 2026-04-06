@@ -1,0 +1,237 @@
+function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
+{
+	// This function gets called once when rendering an object, even if it consists of multiple VDP sprites
+	//  -> That is in contrast to e.g. "Standalone.onDrawVdpSprite" which gets called for each VDP sprite
+	//  -> So if an object's sprites should be replaced with a new loaded graphics, this here is the place to go
+
+	u8 gameMode = global.game_mode & 0x7f
+	bool prioFlag = (objA0.sprite_attributes & 0x8000) != 0
+
+	if (gameMode == 0x0c || gameMode == 0x08)
+	{
+		if (A0 == 0xffffb000 || A0 == 0xffffb04a) && (Setting.MainMechanicOfTheMod != 0)
+		{
+			u8 drawCharacterVariant
+			if (A0 == 0xffffb000)
+			{
+				// Player 1
+				drawCharacterVariant = 0
+			}
+			else if (A0 == 0xffffb04a)
+			{
+				// Player 2
+				drawCharacterVariant = 1
+			}
+			Heroes.DrawTether(drawCharacterVariant)
+		}
+		// Super Flicky
+		if (objA0.update_address == 0x01a19c || objA0.update_address == 0x01a1f4 || objA0.update_address == 0x01a276) && objA0.subtype2c == 0
+		{
+			u8 atex = 0x40 + 0x20 * getMainCharacter()
+			u64 key
+			key = stringformat("superflicky_%d", objA0.animation.sprite)
+			Renderer.drawCustomSprite(key, px, py, atex, objA0.render_flags, renderQueue, 0, 255)
+
+			return true
+		}
+		if (objA0.update_address == 0x0677ce || objA0.update_address == 0x067800) && (isSecondCharacter(CHARACTER_KNUCKLES))
+		{
+			u8 atex = 0x40 + 0x20 * getMainCharacter()
+			u8 atex2 = 0x40 + 0x20 * getSecondCharacter()
+			u64 key
+			u64 key2
+			key = "Tornado_Plane"
+			key2 = "Tornado_Head_Knuckles"
+			Renderer.drawCustomSprite(key, px - 52, py - 24, 0x00, objA0.render_flags, renderQueue, 0, 255)
+			Renderer.drawCustomSprite(key2, px, py - 16, atex2, objA0.render_flags, renderQueue, 0, 255)
+
+			return true
+		}
+		if (objA0.update_address == 0x05ebb4) && (isSecondCharacter(CHARACTER_KNUCKLES))
+		{
+			u8 atex = 0x40 + 0x20 * getSecondCharacter()
+			u64 key
+			key = "Tornado_Head_Knuckles"
+			Renderer.drawCustomSprite(key, px, py, atex, objA0.render_flags, renderQueue, 0, 255)
+
+			return true
+		}
+	}
+
+	u8 flags = prioFlag ? SPRITE_FLAG_PRIO : 0
+	u8 atex
+	// Character icons in Data Select
+	if (objA0.update_address == 0x00d30c || objA0.update_address == 0x00d42c)
+	{
+		if (objA0.animation.sprite == 4)
+		{
+			// Sonic & Tails
+			if (Renderer.hasCustomSprite("saveSel_character_sonic&tails")) || (Renderer.hasCustomSprite("saveSel_character_sonic") && Renderer.hasCustomSprite("saveSel_character_tails"))
+			{
+				if (Renderer.hasCustomSprite("saveSel_character_sonic&tails"))
+				{
+					Renderer.drawCustomSprite("saveSel_character_sonic&tails", px, py, atex, flags, renderQueue)
+				}
+				else
+				{
+					Renderer.drawCustomSprite("saveSel_character_sonic", px-6, py, atex, flags, renderQueue)
+					Renderer.drawCustomSprite("saveSel_character_tails", px+7, py-2, atex, flags | SPRITE_FLAG_FLIP_X, renderQueue)
+				}
+			}
+			else
+			{
+				//sonic
+				if (Renderer.hasCustomSprite("saveSel_character_sonic"))
+					Renderer.drawCustomSprite("saveSel_character_sonic", px-6, py, atex, flags, renderQueue)
+				else
+						Standalone.drawCharacterSpriteDirect(CHARACTER_SONIC, px-8, py - 20, 0xb1, flags | SPRITE_FLAG_FLIP_X, 0x40 + 0x20 * CHARACTER_SONIC, renderQueue)
+					
+				if (Renderer.hasCustomSprite("saveSel_character_tails"))
+					Renderer.drawCustomSprite("saveSel_character_tails", px+7, py-2, atex, flags | SPRITE_FLAG_FLIP_X, renderQueue)
+				else
+					Standalone.drawCharacterSpriteDirect(CHARACTER_TAILS, px+6, py - 18, 0xa6, flags | SPRITE_FLAG_FLIP_X, 0x40 + 0x20 * CHARACTER_TAILS, renderQueue)
+			}
+		}
+		else if (objA0.animation.sprite == 5)
+		{
+			// Sonic Tails & Knuckles
+			if (Renderer.hasCustomSprite("saveSel_character_sonic&knuckles")) || (Renderer.hasCustomSprite("saveSel_character_sonic") && Renderer.hasCustomSprite("saveSel_character_tails"))
+			{
+				// Sonic Tails & Knuckles
+				if (Renderer.hasCustomSprite("saveSel_character_sonic&knuckles"))
+				{
+					Renderer.drawCustomSprite("saveSel_character_sonic&knuckles", px, py, atex, flags, renderQueue)
+				}
+				else
+				{
+					Renderer.drawCustomSprite("saveSel_character_sonic", px-6, py, atex, flags, renderQueue)
+					Renderer.drawCustomSprite("saveSel_character_tails", px+7, py-2, atex, flags, renderQueue)
+				}
+			}
+			else
+			{
+				if (Renderer.hasCustomSprite("saveSel_character_sonic"))
+					Renderer.drawCustomSprite("saveSel_character_sonic", px-6, py, atex, flags, renderQueue)
+				else
+					Standalone.drawCharacterSpriteDirect(CHARACTER_SONIC, px-16, py -20, 0xb1, flags | SPRITE_FLAG_FLIP_X, 0x40 + 0x20 * CHARACTER_SONIC, renderQueue)
+					
+				if (Renderer.hasCustomSprite("saveSel_character_tails"))
+					Renderer.drawCustomSprite("saveSel_character_tails", px+7, py-2, atex, flags, renderQueue)
+				else
+					Standalone.drawCharacterSpriteDirect(CHARACTER_TAILS, px+4, py -18, 0xa6, flags, 0x20 + 0x40 * CHARACTER_TAILS, renderQueue)
+					Standalone.drawCharacterSpriteDirect(CHARACTER_KNUCKLES, px+12, py -22, 0xb4, flags, 0x40 + 0x20 * CHARACTER_KNUCKLES, renderQueue)
+			}
+		}
+		else if (objA0.animation.sprite == 6)
+		{
+			if (Renderer.hasCustomSprite("saveSel_character_sonic&knuckles")) || (Renderer.hasCustomSprite("saveSel_character_sonic") && Renderer.hasCustomSprite("saveSel_character_tails"))
+			{
+				u64 combokey = (Setting.TailsPartner == 0) ? "saveSel_character_tails&sonic" : "saveSel_character_tails&knuckles"
+				// Tails & Sonic
+				if (Renderer.hasCustomSprite(combokey))
+				{
+					Renderer.drawCustomSprite(combokey, px, py, atex, flags, renderQueue)
+				}
+				else
+				{
+					Renderer.drawCustomSprite("saveSel_character_tails", px-6, py, atex, flags, renderQueue)
+					if (Setting.TailsPartner == 0)
+						Renderer.drawCustomSprite("saveSel_character_sonic", px+7, py-2, atex, flags | SPRITE_FLAG_FLIP_X, renderQueue)
+					else
+						Renderer.drawCustomSprite("saveSel_character_tails", px+7, py-2, atex, flags, renderQueue)
+				}
+			}
+			else
+			{
+				// Tails & Sonic
+				if (Renderer.hasCustomSprite("saveSel_character_tails"))
+					Renderer.drawCustomSprite("saveSel_character_tails", px-6, py, atex, flags, renderQueue)
+				else
+					
+	                                Standalone.drawCharacterSpriteDirect(CHARACTER_TAILS, px+-7, py -16, 0xa6, flags, 0x40 + 0x20 * CHARACTER_TAILS, renderQueue)
+			
+				if (Setting.TailsPartner == 0)
+				{
+					if (Renderer.hasCustomSprite("saveSel_character_sonic"))
+						Renderer.drawCustomSprite("saveSel_character_sonic", px+7, py-2, atex, flags | SPRITE_FLAG_FLIP_X, renderQueue)
+					else
+					 Standalone.drawCharacterSpriteDirect(CHARACTER_SONIC, px+15, py - 20, 0xb1, flags, 0x40 + 0x20 * CHARACTER_SONIC, renderQueue)
+				}
+				else
+				{
+					if (Renderer.hasCustomSprite("saveSel_character_knuckles"))
+						Renderer.drawCustomSprite("saveSel_character_knuckles", px+7, py-2, atex, flags, renderQueue)
+					else
+						Standalone.drawCharacterSpriteDirect(CHARACTER_KNUCKLES, px+5, py - 22, 0xb4, flags, 0x40 + 0x20 * CHARACTER_KNUCKLES, renderQueue)
+				}
+			}
+		}
+		else if (objA0.animation.sprite == 7)
+		{
+			// Knuckles Sonic & Tails
+			if (Renderer.hasCustomSprite("saveSel_character_knuckles&sonic")) || (Renderer.hasCustomSprite("saveSel_character_knuckles") && Renderer.hasCustomSprite("saveSel_character_sonic"))
+			{
+				if (Renderer.hasCustomSprite("saveSel_character_knuckles&sonic"))
+				{
+					Renderer.drawCustomSprite("saveSel_character_knuckles&sonic", px, py, atex, flags, renderQueue)
+				}
+				else
+				{
+					Renderer.drawCustomSprite("saveSel_character_knuckles", px-7, py, atex, flags | SPRITE_FLAG_FLIP_X, renderQueue)
+					Renderer.drawCustomSprite("saveSel_character_sonic", px+7, py-2, atex , flags | SPRITE_FLAG_FLIP_X, renderQueue)
+				}
+			}
+			else
+			{
+				if (Renderer.hasCustomSprite("saveSel_character_knuckles"))
+					Renderer.drawCustomSprite("saveSel_character_knuckles", px-6, py, atex, flags, renderQueue)
+				else
+					Standalone.drawCharacterSpriteDirect(CHARACTER_KNUCKLES, px-12, py - 20, 0xb4, flags | SPRITE_FLAG_FLIP_X, 0x40 + 0x20 * CHARACTER_KNUCKLES, renderQueue)
+					Standalone.drawCharacterSpriteDirect(CHARACTER_SONIC, px+3, py - 20, 0xb1, flags, 0x40 + 0x20 * CHARACTER_SONIC, renderQueue)
+					
+					
+				if (Renderer.hasCustomSprite("saveSel_character_sonic"))
+					Renderer.drawCustomSprite("saveSel_character_sonic", px+7, py-2, atex , flags | SPRITE_FLAG_FLIP_X, renderQueue)
+				else
+                    Standalone.drawCharacterSpriteDirect(CHARACTER_TAILS, px+22, py - 16, 0xa6, flags, 0x40 + 0x20 * CHARACTER_TAILS, renderQueue)
+			}
+		}
+		else if (objA0.animation.sprite == 8)
+		{
+			if (Renderer.hasCustomSprite("saveSel_character_knuckles&tails")) || (Renderer.hasCustomSprite("saveSel_character_knuckles") && Renderer.hasCustomSprite("saveSel_character_tails"))
+			{
+				// Knuckles & Tails
+				if (Renderer.hasCustomSprite("saveSel_character_knuckles&tails"))
+				{
+					Renderer.drawCustomSprite("saveSel_character_knuckles&tails", px, py, atex, flags, renderQueue)
+				}
+				else
+				{
+					Renderer.drawCustomSprite("saveSel_character_knuckles", px-7, py, atex, flags | SPRITE_FLAG_FLIP_X, renderQueue)
+					Renderer.drawCustomSprite("saveSel_character_tails", px+7, py-2, atex, flags | SPRITE_FLAG_FLIP_X, renderQueue)
+				}
+			}
+			else
+			{
+				if (Renderer.hasCustomSprite("saveSel_character_knuckles"))
+					Renderer.drawCustomSprite("saveSel_character_knuckles", px-6, py, atex, flags, renderQueue)
+				else
+					Standalone.drawCharacterSpriteDirect(CHARACTER_KNUCKLES, px-8+3, py - 20, 0xb4, flags | SPRITE_FLAG_FLIP_X, 0x40 + 0x20 * CHARACTER_KNUCKLES, renderQueue)
+					
+				if (Renderer.hasCustomSprite("saveSel_character_tails"))
+					Renderer.drawCustomSprite("saveSel_character_tails", px+7, py-2, atex, flags | SPRITE_FLAG_FLIP_X, renderQueue)
+				else
+					Standalone.drawCharacterSpriteDirect(CHARACTER_TAILS, px+6, py - 18, 0xa6, flags | SPRITE_FLAG_FLIP_X, 0x40 + 0x20 * CHARACTER_TAILS, renderQueue)
+			}
+		}
+		
+		return false
+	}
+
+	//continue character addresses i guess?
+	//(objA0.update_address == 0x05c55c) - Sonic - ST Duo
+	//(objA0.update_address == 0x05c74a) - Tails - ST Duo
+	//(objA0.update_address == 0x05c74a) - Sonic Alone
+
+	return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+}

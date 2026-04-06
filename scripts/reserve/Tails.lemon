@@ -1,0 +1,61 @@
+
+
+function void Sonic.Spawn(s16 sonic.x, s16 sonic.y)
+{
+    if (allocDynamicObjectStd())
+    {
+        objA1.update_address = 0x01365c
+        objA1.render_flags = (render_flag.WORLD | render_flag.VISIBLE | 0x40)
+        objA1.position.x.u16 = sonic.x
+        objA1.position.y.u16 = sonic.y + 2
+        objA1.value3e = 0xAA
+    }
+}
+
+function void Character.Initialization.shared(u8 character)
+{
+	base.Character.Initialization.shared(character)
+	if (character == CHARACTER_SONIC && global.characters == CHARS_SONIC_ALONE)
+	{
+		  // In the Tornado intro, the player's X position is almost always less than 100 pixels.
+       // In normal gameplay, the player starts much further ahead.
+        if (char.position.x.u16 < 0x050)
+        {
+            return
+        }
+        // If Knuckles is already "inside" the level (X greater than 256), then he will spawn.
+        A0 = 0xffffb000
+        Knuckles.Spawn(char.position.x.u16 -17, char.position.y.u16)
+	}
+}
+
+
+
+function void Knuckles.Spawn(s16 knux.x, s16 knux.y)
+{
+    if (allocDynamicObjectStd())
+    {
+        objA1.update_address = 0x01365c
+        objA1.render_flags = (render_flag.WORLD | render_flag.VISIBLE | 0x40)
+        objA1.position.x.u16 = knux.x
+        objA1.position.y.u16 = knux.y + 2
+        objA1.value3e = 0xAA
+    }
+}
+
+function void Character.Initialization.shared(u8 character)
+{
+	base.Character.Initialization.shared(character)
+	if (character == CHARACTER_KNUCKLES && global.characters == CHARS_KNUCKLES_ALONE)
+	{
+		  // In the Tornado intro, the player's X position is almost always less than 100 pixels.
+       // In normal gameplay, the player starts much further ahead.
+        if (char.position.x.u16 < 0x050)
+        {
+            return
+        }
+        // If Knuckles is already "inside" the level (X greater than 256), then he will spawn.
+        A0 = 0xffffb000
+        Knuckles.Spawn(char.position.x.u16 -17, char.position.y.u16)
+	}
+}

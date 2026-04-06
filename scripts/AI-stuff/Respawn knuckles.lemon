@@ -1,0 +1,469 @@
+//# address-hook(0x013d4a) end(0x013ec8)
+function void fn013d4a()
+{
+	/*if (Key6)
+	{
+		tails.ai_routine = 0x02
+		Character.Die()
+		return
+	}*/
+	
+	if (u8[0xffffb000 + 0x05] >= 0x06 && char.character != CHARACTER_TAILS)
+	{
+		tails.ai_routine = 0x04
+		char.spindash = 0
+		char.spindash_charge = 0
+		char.control_flags = 0x81
+		char.flags = char.flag.IN_AIR
+		if (char.character == CHARACTER_SONIC)
+			char.state = 0x21
+		else
+		{
+			char.state = char.state.KNUX_FLYCLIMB
+			KnucklesAiRespawnUpdateSpr2()
+		}
+		ems_sonicResp = 1
+		return
+	}
+	
+	base.fn013d4a()
+}
+
+//# address-hook(0x013b26) end(0x013bf6)
+function void fn013b26()
+{
+	if (char.character == CHARACTER_TAILS)
+	{
+		base.fn013b26()
+		return
+	}
+	
+#if STANDALONE
+	// Wait for an additional delay (used in AIZ intro)
+	if (tails.respawn_counter > 0)
+	{
+		--tails.respawn_counter
+		return
+	}
+#endif
+
+	if ((control.tails.state & (CONTROL_START | CONTROL_ABC)) == 0)	// Check buttons, but not D-pad
+	{
+		// Check only every 64 frames
+		if ((level.framecounter & 0x3f) != 0)
+			return
+		if (u8[A1 + 0x2e] & 0x80)	// control_flags
+			return
+		if (u8[A1 + 0x2a] & 0x80)	// flags
+			return
+	}
+	
+	ems_sonicResp = (u8[0xffffb000 + 0x05] >= 0x06 || ems_set_sonicRespAnim == 2)
+	
+	tails.ai_routine = 0x04
+
+	// Spawn above player 1
+	u16 px = objA1.position.x.u16
+	u16 py = objA1.position.y.u16
+	char.position.x.u16 = px
+	if (char.character == CHARACTER_SONIC && !ems_sonicResp)
+		char.position.y.u16 = camera.position.y.u16 + getScreenHeight()
+	else
+		char.position.y.u16 = py + (global.inv_gravity ? 0xc0 : -0xc0)
+	tails.flight_target.x = px
+	tails.flight_target.y = py
+	char.sprite_attributes |= sprite_attribute.PRIORITY
+	char.sprite_priority = (char.character == CHARACTER_SONIC) ? 0x80 : 0x100
+	char.velocity.x = 0
+	if (char.character == CHARACTER_SONIC && !ems_sonicResp)
+	{
+		u16 distY = abs(char.position.y.u16 - objA1.position.y.u16)
+		char.velocity.y = (ems_set_sonicRespAnim == 1) ? -0x900 : -0x600
+		char.velocity.y -= distY * 8
+		if (objA1.velocity.y < 0)
+			char.velocity.y += objA1.velocity.y >> 8
+	}
+	else
+		char.velocity.y = 0
+	char.groundspeed = 0
+	u8[A0 + 0x2d] = 0
+	char.double_jump_state = 0
+	char.flags |= char.flag.IN_AIR
+	char.drown_countdown = 30
+	char.control_flags = 0x81
+	u8[A0 + 0x30] = 0
+	u8[A0 + 0x31] = 0
+	char.hlock_countdown = 0
+	char.invuln.countdown = 0
+	char.invinc.countdown = 0
+	char.speedup.countdown = 0
+	char.protection_flag = 0
+	char.look_up_down_timer = 0
+	char.angle_sensor_1 = 0
+	char.angle_sensor_2 = 0
+	u8[A0 + 0x3c] = 0
+	char.spindash = 0
+	char.spindash_charge = 0
+	char.jumping = 0
+
+#if STANDALONE
+	// Fix for Tails' speed caps not corrected when he despawned underwater
+	setSpeedCapProperties(A4, false)
+#endif
+
+	u8[A0 + 0x41] = 0
+	if (char.character == CHARACTER_SONIC)
+	{
+		if (ems_sonicResp)
+			char.state = 0x21
+		else
+		{
+			char.state = char.state.ROLLING
+			char.hitbox_extends.x = 9
+			char.hitbox_extends.y = 14
+			char.flags |= char.flag.ROLLING
+			if (objA1.flags2a & char.flag.FACING_LEFT)
+				char.flags |= char.flag.FACING_LEFT
+			else
+				char.flags &= ~char.flag.FACING_LEFT
+
+			if (ems_set_sonicRespAnim == 1)
+				ems_p3SonicRespScale = 0x20000
+		}
+	}
+	else
+	{
+		char.state = char.state.KNUX_FLYCLIMB
+		ems_knuxRespawnGlide = 0
+	}
+}
+
+//# address-hook(0x013bf8) end(0x013d48)
+function void fn013bf8()
+{
+	if (char.character == CHARACTER_SONIC)
+		fn013bf8_Sonic()
+	else if (char.character == CHARACTER_KNUCKLES)
+		fn013bf8_Knuckles()
+	else
+		base.fn013bf8()
+}
+
+function void fn013bf8_Sonic()
+{
+	// Tails AI flying in after respawn
+	if (objA0.render_flags & render_flag.VISIBLE)
+	{
+		tails.flight_countdown = 0xf0
+		char.flags |= char.flag.IN_AIR
+		char.state = (ems_sonicResp) ? 0x21 : char.state.ROLLING
+		tails.respawn_counter = 0
+	}
+	else
+	{
+		++tails.respawn_counter
+	#if STANDALONE
+		if (tails.respawn_counter >= 300 || (Input.buttonPressed(BUTTON_Y | BUTTON_PAD2) && tails.ai_routine == 0x06))
+	#else
+		if (tails.respawn_counter >= 300)
+	#endif
+		{
+			tails.respawn_counter = 0
+			tails.ai_routine = 0x02
+			char.control_flags = 0x81
+			char.flags = char.flag.IN_AIR
+			char.position.x.u16 = 0
+			char.position.y.u16 = 0
+			tails.flight_countdown = 0xf0
+			char.state = char.state.ROLLING
+			return
+		}
+		
+		if (char.position.y.u16 > camera.position.y.u16 + getScreenHeight() && char.velocity.y > 0x100 && !ems_sonicResp)
+		{
+			tails.ai_routine = 0x02
+			char.state = char.state.DISAPPEARED
+			return
+		}
+	}
+
+	D3.u8 = posbackup.offset.player1 - 0x44
+	tails.flight_target.x = u16[0xffffe500 + D3.u8]
+	tails.flight_target.y = u16[0xffffe500 + D3.u8 + 2]
+
+	s16 dx = char.position.x.u16 - tails.flight_target.x
+	s16 dy = char.position.y.u16 - tails.flight_target.y
+	
+	if (ems_sonicResp)
+	{
+		if (dx != 0)
+		{
+			s16 moveX = min(abs(dx) >> 4, 12)
+			moveX += abs(objA1.velocity.x) + 1
+			if (dx >= 0)
+			{
+				char.flags |= char.flag.FACING_LEFT
+				if (moveX >= dx)
+				{
+					moveX = dx
+					dx = 0
+				}
+				char.position.x.u16 -= moveX
+			}
+			else
+			{
+				char.flags &= ~char.flag.FACING_LEFT
+				dx = -dx
+				if (moveX >= dx)
+				{
+					moveX = dx
+					dx = 0
+				}
+				char.position.x.u16 += moveX
+			}
+		}
+	
+		if (dy != 0)
+		{
+		#if STANDALONE
+			// Consider vertical level wrap
+			if (level.vertical_wrap == 0xff00)
+			{
+				dy &= level.height.bitmask
+				if (dy > level.height.bitmask / 2)
+					dy -= (level.height.bitmask + 1)
+			}
+		#endif
+			char.position.y.u16 += (dy > 0) ? -1 : 1
+		}
+	}
+	else
+	{
+		char.position.x.u16 = objA1.position.x.u16
+		
+		s32 vy = s32(char.velocity.y) << 8
+		char.position.y += global.inv_gravity ? -vy : vy
+		char.velocity.y += 0x38
+		
+		if (ems_set_sonicRespAnim == 1 && ems_p3SonicRespScale >= 0x10000)
+			ems_p3SonicRespScale = max(ems_p3SonicRespScale - 0x500, 0x10000)
+	}
+
+	D2.u8 = u8[0xffffe400 + D3.u8 + 2] & 0x80
+	if (D2.u8 == 0 && u8[0xffffb000 + 0x05] < 0x06)
+	{
+	#if STANDALONE
+		// Let Tails drop down when close enough to either the target point or the main character's current position
+		bool gainControlNow = (abs(dx) <= 4 && abs(dy) <= 4)
+		if (ems_sonicResp)
+			gainControlNow = gainControlNow || (abs(objA1.position.x.u16 - char.position.x.u16) <= 4 && abs(objA1.position.y.u16 - char.position.y.u16) <= 4)
+		else
+		{
+			gainControlNow = (abs(objA1.position.x.u16 - char.position.x.u16) <= 4 && abs((objA1.position.y.u16 - 24) - char.position.y.u16) <= 16 && char.position.y.u16 < objA1.position.y.u16 - 24)
+		
+			if (ems_set_sonicRespAnim == 1 && ems_p3SonicRespScale > 0x10000)
+				gainControlNow = false
+				
+		}
+	
+		// Allow for pressing a jump button to gain control over Tails at once
+		gainControlNow = gainControlNow || (control.tails.pressed & CONTROL_ABC)
+	#else
+		bool gainControlNow = (dx == 0 && dy == 0)
+	#endif
+
+		if (gainControlNow)
+		{
+			tails.ai_routine = 0x06
+			char.control_flags = 0
+			char.velocity.x = 0
+			if (ems_sonicResp)
+				char.velocity.y = 0
+			char.groundspeed = 0
+			char.flags &= char.flag.UNDERWATER
+			char.flags |= char.flag.IN_AIR
+			char.hlock_countdown = 0
+			char.sprite_attributes = (char.sprite_attributes & ~sprite_attribute.PRIORITY) | (objA1.sprite_attributes & sprite_attribute.PRIORITY)
+			char.layer_flags1 = u8[A1 + 0x46]
+			char.layer_flags2 = u8[A1 + 0x47]
+			char.sprite_priority = objA1.sprite_priority
+			char.state = char.state.ROLLING
+			
+			return
+		}
+	}
+	char.control_flags = 0x81
+}
+
+function void fn013bf8_Knuckles()
+{
+	// Tails AI flying in after respawn
+	if (objA0.render_flags & render_flag.VISIBLE)
+	{
+		tails.flight_countdown = 0xf0
+		char.flags |= char.flag.IN_AIR
+		KnucklesAiRespawnUpdateSpr()
+		tails.respawn_counter = 0
+	}
+	else
+	{
+		++tails.respawn_counter
+	#if STANDALONE
+		if (tails.respawn_counter >= 300 || (Input.buttonPressed(BUTTON_Y | BUTTON_PAD2) && tails.ai_routine == 0x06))
+	#else
+		if (tails.respawn_counter >= 300)
+	#endif
+		{
+			tails.respawn_counter = 0
+			tails.ai_routine = 0x02
+			char.control_flags = 0x81
+			char.flags = char.flag.IN_AIR
+			char.position.x.u16 = 0
+			char.position.y.u16 = 0
+			tails.flight_countdown = 0xf0
+			KnucklesAiRespawnUpdateSpr2()
+			return
+		}
+	}
+
+	D3.u8 = posbackup.offset.player1 - 0x44
+	tails.flight_target.x = u16[0xffffe500 + D3.u8]
+	tails.flight_target.y = u16[0xffffe500 + D3.u8 + 2]
+
+	s16 dx = char.position.x.u16 - tails.flight_target.x
+	if (dx != 0)
+	{
+		s16 moveX = min(abs(dx) >> 4, 12)
+		moveX += abs(objA1.velocity.x) + 1
+		if (dx >= 0)
+		{
+			//char.flags |= char.flag.FACING_LEFT
+			if (moveX >= dx)
+			{
+				moveX = dx
+				dx = 0
+			}
+			char.position.x.u16 -= moveX
+		}
+		else
+		{
+			//char.flags &= ~char.flag.FACING_LEFT
+			dx = -dx
+			if (moveX >= dx)
+			{
+				moveX = dx
+				dx = 0
+			}
+			char.position.x.u16 += moveX
+		}
+	}
+
+	s16 dy = char.position.y.u16 - tails.flight_target.y - (objA0.hitbox_extends.y - objA1.hitbox_extends.y)
+	if (dy != 0)
+	{
+	#if STANDALONE
+		// Consider vertical level wrap
+		if (level.vertical_wrap == 0xff00)
+		{
+			dy &= level.height.bitmask
+			if (dy > level.height.bitmask / 2)
+				dy -= (level.height.bitmask + 1)
+		}
+	#endif
+		char.position.y.u16 += (dy > 0) ? -1 : 1
+	}
+
+	D2.u8 = u8[0xffffe400 + D3.u8 + 2] & 0x80
+	if (D2.u8 == 0 && u8[0xffffb000 + 0x05] < 0x06)
+	{
+	#if STANDALONE
+		// Let Tails drop down when close enough to either the target point or the main character's current position
+		bool gainControlNow = (abs(dx) <= 4 && abs(dy) <= 16)
+		gainControlNow = gainControlNow || (abs(objA1.position.x.u16 - char.position.x.u16) <= 4 && abs(objA1.position.y.u16 - char.position.y.u16) <= 4)
+		
+		// Allow for pressing a jump button to gain control over Tails at once
+		gainControlNow = gainControlNow || (control.tails.pressed & CONTROL_ABC)
+	#else
+		bool gainControlNow = (dx == 0 && dy == 0)
+	#endif
+		
+		if (gainControlNow)
+		{
+			tails.ai_routine = 0x06
+			char.control_flags = 0
+			char.state = char.state.KNUX_FALLING
+			char.velocity.x = 0
+			char.velocity.y = 0
+			char.groundspeed = 0
+			char.flags &= char.flag.UNDERWATER
+			char.flags |= char.flag.IN_AIR
+			char.hlock_countdown = 0
+			char.sprite_attributes = (char.sprite_attributes & ~sprite_attribute.PRIORITY) | (objA1.sprite_attributes & sprite_attribute.PRIORITY)
+			char.layer_flags1 = u8[A1 + 0x46]
+			char.layer_flags2 = u8[A1 + 0x47]
+			return
+		}
+	}
+	char.control_flags = 0x81
+}
+
+function void KnucklesAiRespawnUpdateSpr()
+{
+	u64 temp = 14
+	
+	s16 dist = objA1.position.x.u16 - char.position.x.u16
+	s16 gAngle = clamp(dist, temp * -3, temp * 3)
+	s16 changeBy = (abs(gAngle - ems_knuxRespawnGlide) > 45) ? 2 : 1
+	
+	if (gAngle != ems_knuxRespawnGlide)
+	{
+		if (gAngle > ems_knuxRespawnGlide)
+		{
+			ems_knuxRespawnGlide += changeBy
+			if (ems_knuxRespawnGlide < gAngle)
+				ems_knuxRespawnGlide = gAngle
+		}
+		else 
+		{
+			ems_knuxRespawnGlide -= changeBy
+			if (ems_knuxRespawnGlide > gAngle)
+				ems_knuxRespawnGlide = gAngle
+		}
+	}
+	
+	if (abs(ems_knuxRespawnGlide) >= temp*2)
+		char.animation.sprite = 0xc0
+	else if (abs(ems_knuxRespawnGlide) >= temp)
+		char.animation.sprite = 0xc1
+	else
+		char.animation.sprite = 0xc2
+	
+	char.animation.timer = 1
+	
+	if (ems_knuxRespawnGlide < 0)
+		char.flags |= char.flag.FACING_LEFT
+	else if (ems_knuxRespawnGlide > 0)
+		char.flags &= ~char.flag.FACING_LEFT
+}
+
+function void KnucklesAiRespawnUpdateSpr2()
+{
+	u64 temp = 14
+	
+	s16 dist = objA1.position.x.u16 - char.position.x.u16
+	ems_knuxRespawnGlide = clamp(dist, temp * -3, temp * 3)
+	
+	if (abs(ems_knuxRespawnGlide) >= temp*2)
+		char.animation.sprite = 0xc0
+	else if (abs(ems_knuxRespawnGlide) >= temp)
+		char.animation.sprite = 0xc1
+	else
+		char.animation.sprite = 0xc2
+	
+	char.animation.timer = 1
+	
+	if (ems_knuxRespawnGlide < 0)
+		char.flags |= char.flag.FACING_LEFT
+	else if (ems_knuxRespawnGlide > 0)
+		char.flags &= ~char.flag.FACING_LEFT
+}

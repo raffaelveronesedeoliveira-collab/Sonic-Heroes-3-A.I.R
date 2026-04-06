@@ -1,0 +1,35 @@
+//# address-hook(0x01578e) end(0x0157e0)
+function void Character.UpdateDiedState.Tails()
+{
+	if (A0 == 0xffffc2ca) // TAILSP2
+	{
+		// Fall Physics
+		char.velocity.y += 0x38
+		char.position.y.u16 += char.velocity.y >> 8
+
+		// If it disappears down there... RESPAWN!
+		if (char.position.y.u16 > camera.foreground.y.u16 + 280)
+		{
+			// 1. Take the Player 1 (Sonic) position.
+			u32 p1 = 0xffffb000
+			
+			// 2. Teleport Tails to the top of P1, but off-screen (at the very top).
+			char.position.x.u16 = u16[p1 + 0x10]
+			char.position.y.u16 = camera.foreground.y.u16 - 32
+			
+			// 3. Reset the speed
+			char.velocity.x = 0
+			char.velocity.y = 0
+			char.groundspeed = 0
+			
+			// 4. RETURN TO NORMAL STATE
+                        // This makes him "respawn" and start flying or falling, following Sonic.
+			char.base_state = base_state.INITIAL
+			
+			// Optional: Define an AI routine for it to float in. (0x0c)
+			// tails.ai_routine = 0x0c 
+		}
+		return
+	}
+	base.Character.UpdateDiedState.Tails()
+}

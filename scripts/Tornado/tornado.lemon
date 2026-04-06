@@ -1,0 +1,67 @@
+  // Frames Part
+//# address-hook(0x067888) end(0x06789a)
+function void fn067888()
+{
+	++objA0.animation.frame
+	objA0.animation.frame = (objA0.animation.frame + 4) % 6
+	MoveWithParent()
+	fn084920()
+}
+
+  // Plane
+function bool Standalone.onWriteToSpriteTable(s16 px, s16 py, u16 renderQueue)
+{
+    u64 key
+    u8 flags = ((objA0.render_flags & 0x01) ? SPRITE_FLAG_FLIP_X : 0) | ((objA0.render_flags & 0x02) ? SPRITE_FLAG_FLIP_Y : 0) | ((objA0.sprite_attributes & 0x8000) ? SPRITE_FLAG_PRIO : 0)
+    u8 atex = 0x40 + 0x20 * getMainCharacter()
+      if (objA0.update_address == 0x0677ce || objA0.update_address == 0x067800) // The tornado
+    {
+        key = (isMainCharacter(CHARACTER_SONIC)) ? "Tails_Torn" : "Sonic_Torn"
+        Renderer.drawCustomSprite(key, px, py, 0, flags, renderQueue)
+        return true
+    }
+
+    // Outro
+    else if (objA0.update_address == 0x05ebb4)
+    {
+        key = (isMainCharacter(CHARACTER_SONIC) || (isMainCharacter(CHARACTER_KNUCKLES) && isSecondCharacter(CHARACTER_TAILS))) ? "Tornado_Head_Tails" : "Tornado_Head_Sonic"
+        Renderer.drawCustomSprite(key, px, py, 0, flags, renderQueue)
+        return true
+    }
+
+    else if (objA0.update_address == 0x05ed18) //standing character
+    {                
+        if (objA0.subtype2c != 0) //standing character
+        {
+            if (isMainCharacter(CHARACTER_SONIC))
+                key = "Sonic_Mini"
+            else if (isMainCharacter(CHARACTER_TAILS))
+                key = "Tails_Mini"
+            else
+                return false
+        }
+        else //pilot
+        {
+            key = (isMainCharacter(CHARACTER_TAILS) || (isMainCharacter(CHARACTER_KNUCKLES) && !isSecondCharacter(CHARACTER_TAILS))) ? "Small_sonic_MA" : "Small_tails_MA"
+        }
+        Renderer.drawCustomSprite(key, px, py, 0, flags, renderQueue)        
+        return true
+    }
+
+   // Tornado Propeller
+   else if (objA0.update_address == 0x06784a)
+    {
+       key = stringformat("Tornado_propeller_0%d", objA0.animation.sprite)
+       Renderer.drawCustomSprite(key, px, py, 0, flags, renderQueue)        
+       return true
+     }
+
+   // Tornado Fire
+   else if (objA0.update_address == 0x067888)
+    {
+       key = stringformat("Turbine_fire_0%d", objA0.animation.frame)
+       Renderer.drawCustomSprite(key, px, py, 0, flags, renderQueue)        
+       return true
+     }
+    return base.Standalone.onWriteToSpriteTable(px, py, renderQueue)
+}

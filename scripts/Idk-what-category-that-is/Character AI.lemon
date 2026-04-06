@@ -1,0 +1,249 @@
+function void Character.AI()
+{
+        //System.writeDisplayLine(stringformat("%x",Players.CombiiDisabled))
+	if (global.zone_act == 0x0a01) || (global.zone == 0x0c)
+	{
+		Players.CombiiDisabled = 2
+		return
+	}
+	//System.writeDisplayLine(stringformat("%x",p2.position.x.s16))
+	if (!(player1.base_state >= 0x02 && player1.base_state <= 0x04) && (player2.base_state >= 0x02 && player2.base_state <= 0x04)) || (isSonicIntro()) || (tails.ai_routine != 0x06) && (tails.ai_routine != 0x30) || (tails.ai_routine != 0x06) && (tails.ai_routine != 0x30)
+	{
+		if (tails.ai_routine == 20)
+		{
+			char.velocity.x = 0
+		}
+		//FlameQuest.Character.resetRGBKnux()
+	}
+	else 
+	{
+		Players.CombiiDisabled = 0
+		//FlameQuest.Character.resetRGBKnux()
+	}
+        bool heroes
+        heroes = true
+
+	// bool so i don't have to comment everything out every time
+	// we're using s16s here for interger underflow reasons
+	if (A0 == 0xffffb000)
+	{
+		// Character is the main player
+		//P1.YPosition = char.position.y.s16
+		//P1.XPosition = char.position.x.s16
+		//System.writeDisplayLine(stringformat("%x",P2.XPosition - P1.XPosition))
+		{
+			if (heroes = true)
+			{
+			}
+		}
+	}
+	else
+	{
+		if (tails.ai_routine != 0x06) && (tails.ai_routine != 0x30)
+		{
+			if (tails.ai_routine == 0x10)
+			{
+				tails.ai_routine = 0x06
+				char.state = char.state.ROLLING
+				char.double_jump_state = 0
+				char.jumping = 0
+			}
+			
+		}
+		else if (Players.Heroes == 0xFF)
+		{
+			// bool so i don't have to comment everything out every time
+			
+			char.flags |= char.flag.IN_AIR
+			char.jumping = 0
+			//lookupCos for X
+			//LookupSin for Y
+			if (heroes = true)
+			{
+				u8 angle = player1.rotation //lookupAngleByVector(charXPos - enemyXPos, charYPos - enemyYPos)
+				p2.position.x.s16 = p1.position.x.s16 + ((s32(lookupCos(player1.rotation)) * (player1.flags & char.flag.FACING_LEFT ? -20 : 20)) >> 8)
+				p2.position.y.s16 = p1.position.y.s16 + ((s32(lookupSin(player1.flags & char.flag.FACING_LEFT ? player1.rotation : -player1.rotation)) * -20) >> 8)
+			}
+			else
+			{
+				p2.position.x.s16 = p1.position.x.s16 + (player1.flags & char.flag.FACING_LEFT ? -20 : 20)
+				p2.position.y.s16 = p1.position.y.s16 - 10
+			}
+		}
+		else if (Players.Heroes == 0xFF)
+		{
+			Players.Heroes = 0xFF
+			// Character is the second player
+			//P2.YPosition = char.position.y.s16
+			//P2.XPosition = char.position.x.s16
+		}
+	}
+      if (Players.Heroes == 0xFF)
+	{
+		if (A0 == 0xffffb000)
+		{
+			u8 outofgrabrange = ((p1.position.x.s16 - p2.position.x.s16 > 0x40) || (p2.position.x.s16 - p1.position.x.s16 > 0x40) || (p1.position.y.s16 - p2.position.y.s16 > 0x40) || (p2.position.y.s16 - p1.position.y.s16 > 0x40))
+			if (char.state != char.state.ROLLING) || outofgrabrange && (player1.base_state >= 0x02 && player1.base_state <= 0x04 && player2.base_state >= 0x02 && player2.base_state <= 0x04) || (!(char.flags & char.flag.IN_AIR)) || (player1.state == char.state.WIN_POSE || player2.state == char.state.WIN_POSE)
+			{
+				Players.CombiiDisabled = 0
+				char.control_flags &= ~0x01
+				char.control_flags &= ~0x80
+				char.state = char.state.GOT_HURT
+				char.flags |= char.flag.IN_AIR
+				char.velocity.x = (player1.flags & char.flag.FACING_LEFT ? -0x7F0 : 0x7F0)
+				player2.flags |= char.flag.CONTROL_LOCK
+				if (player1.flags & char.flag.FACING_LEFT)
+				{
+					player2.flags |= char.flag.FACING_LEFT
+				}
+				else
+				{
+					player2.flags &= ~char.flag.FACING_LEFT
+				}
+			}
+			else
+			{
+				char.flags |= char.flag.IN_AIR
+				//char.position.y.u16 = P2.YPosition
+				//char.position.x.u16 = P2.XPosition
+			}
+		}
+		else
+		{
+			if (char.state == char.state.SPINDASH)
+			{
+				char.spindash = 0
+				char.state = char.state.ROLLING
+				Character.CheckStartJump()
+			}
+		}
+	}
+	else if (Players.Heroes == 0xFF)
+	{
+		if (A0 == 0xffffb000)
+		{
+			u8 outofgrabrange = ((p1.position.x.s16 - p2.position.x.s16 > 0x40) || (p2.position.x.s16 - p1.position.x.s16 > 0x40) || (p1.position.y.s16 - p2.position.y.s16 > 0x40) || (p2.position.y.s16 - p1.position.y.s16 > 0x40))
+			if (char.state != char.state.ROLLING) || outofgrabrange && (player1.base_state >= 0x02 && player1.base_state <= 0x04 && player2.base_state >= 0x02 && player2.base_state <= 0x04) || (!(char.flags & char.flag.IN_AIR)) || (player1.state == char.state.WIN_POSE || player2.state == char.state.WIN_POSE)
+			{
+				Players.CombiiDisabled = 0
+				char.control_flags &= ~0x01
+				char.control_flags &= ~0x80
+				char.state = char.state.ROLLING
+				char.flags |= char.flag.IN_AIR
+				char.velocity.x = (player1.flags & char.flag.FACING_LEFT ? -0x7F0 : 0x7F0)
+				player1.flags |= char.flag.CONTROL_LOCK
+				if (player2.flags & char.flag.FACING_LEFT)
+				{
+					player1.flags |= char.flag.FACING_LEFT
+				}
+				else
+				{
+					player1.flags &= ~char.flag.FACING_LEFT
+				}
+			}
+			else
+			{
+				char.flags |= char.flag.IN_AIR
+				//char.position.y.u16 = P2.YPosition
+				//char.position.x.u16 = P2.XPosition
+			}
+		
+		}
+		else
+		{
+			if (char.state == char.state.SPINDASH)
+			{
+				char.spindash = 0
+				char.state = char.state.ROLLING
+				Character.CheckStartJump()
+			}
+		}
+	}
+	else if (Players.CombiiDisabled != 0) || (Setting.MainMechanicOfTheMod == 0)
+	{
+		return
+	}
+	if (char.state == char.state.KNUX_FLYCLIMB)
+		return
+	s16 char.vx = (!(char.flags & char.flag.IN_AIR)) ? (char.groundspeed >= 0x500) : (char.velocity.x >= 0x500)
+	s64 range = 0x90
+	s64 speedcap = 0xb00
+	if (p1.position.x.s16 - p2.position.x.s16 > range) // is player 2 left of player 1?
+	{
+		if (abs(char.vx) <= speedcap)
+		{
+			u16 vx = abs(p1.position.x.s16 - p2.position.x.s16)
+			if (A0 != 0xffffb000) && (!(char.vx <= -0x900)) // are you not player 1?
+			{
+				char.velocity.x += vx / 2
+				char.groundspeed += vx / 2
+			}
+			else if (!(char.vx >= 0x900))
+			{
+				char.velocity.x -= vx / 2
+				char.groundspeed -= vx / 2
+			}
+		}
+		if (char.state == char.state.STANDING || char.state == char.state.LOOKING_UP || char.state == char.state.COWERING)
+			char.state = char.state.RUNNING
+	}
+	if (p2.position.x.s16 - p1.position.x.s16 > range) // is player 2 right of player 1?
+	{
+		if (abs(char.vx) <= speedcap)
+		{
+			u16 vx = abs(p1.position.x.s16 - p2.position.x.s16)
+			if (A0 != 0xffffb000) && (!(char.vx >= speedcap)) // are you not player 1?
+			{
+				char.velocity.x -= vx / 2
+				char.groundspeed -= vx / 2
+			}
+			else if (!(char.vx <= -speedcap))
+			{
+				char.velocity.x += vx / 2
+				char.groundspeed += vx / 2
+			}
+		}
+		if (char.state == char.state.STANDING || char.state == char.state.LOOKING_UP || char.state == char.state.COWERING)
+			char.state = char.state.RUNNING
+	}
+	if (p1.position.y.s16 - p2.position.y.s16 > range) // is player 2 below player 1?
+	{
+		if (abs(char.velocity.y) <= speedcap)
+		{
+			if (A0 != 0xffffb000) && (!(char.velocity.y >= speedcap)) // are you not player 1?
+			{
+				char.flags |= char.flag.IN_AIR
+				u16 vy = abs(p2.position.y.s16 - p1.position.y.s16)
+				char.velocity.y += vy / 2
+			}
+			else if (!(char.velocity.y <= -speedcap))
+			{
+				char.flags |= char.flag.IN_AIR
+				u16 vy = abs(p1.position.y.s16 - p2.position.y.s16)
+				char.velocity.y -= vy / 2
+			}
+		}
+		if (char.state == char.state.STANDING || char.state == char.state.LOOKING_UP || char.state == char.state.COWERING)
+			char.state = char.state.RUNNING
+	}
+	if (p2.position.y.s16 - p1.position.y.s16 > range) // is player 2 above player 1?
+	{
+		if (abs(char.velocity.y) <= speedcap)
+		{
+			if (A0 != 0xffffb000) && (!(char.velocity.y <= -speedcap))// are you not player 1?
+			{
+				//char.flags |= char.flag.IN_AIR
+				u16 vy = abs(p2.position.y.s16 - p1.position.y.s16)
+				char.velocity.y -= vy / 4
+			}
+			else if (!(char.velocity.y <= -speedcap))
+			{
+				//char.flags |= char.flag.IN_AIR
+				u16 vy = abs(p2.position.y.s16 - p1.position.y.s16)
+				char.velocity.y += vy / 4
+			}
+		}
+		if (char.state == char.state.STANDING || char.state == char.state.LOOKING_UP || char.state == char.state.COWERING)
+			char.state = char.state.RUNNING
+	}
+}

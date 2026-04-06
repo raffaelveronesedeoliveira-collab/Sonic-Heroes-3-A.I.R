@@ -1,0 +1,59 @@
+global u8 ems_sonicResp
+global u8 ems_set_sonicRespAnim
+global u8 ems_p3SonicRespScale
+global s16 ems_knuxRespawnGlide
+
+global s64 P2.XPosition
+global s64 P2.YPosition
+
+// The player combos
+global bool useSonicTailsAndKnuckles
+global bool useTailsAndPartner
+global bool useKnucklesTailsAndSonic
+
+global s64 Players.CombiiDisabled
+
+global s64 Players.Heroes
+
+//global s64 P1.XPosition
+//global s64 P1.YPosition
+
+// Settings
+global s64 Setting.TailsPartner
+global s64 Setting.CameraStyle
+global s64 Setting.SonicP2FlyinStyle
+global s64 Setting.ChainSprite
+global s64 Setting.SpriteOpacity
+global s64 Setting.AButtonMoves
+global s64 Setting.PaletteChanges
+//Eibh#3034 asked for this
+global s64 Setting.MainMechanicOfTheMod
+
+// s16 vers of the u16 variables
+define char.position.x.s16		= s16[A0 + 0x10]
+define char.position.y.s16		= s16[A0 + 0x14]
+
+//player 1 and player 2 specific variables
+define p1.position.x.s16	= s16[0xffffb000 + 0x10]
+define p1.position.y.s16	= s16[0xffffb000 + 0x14]
+
+define p2.position.x.s16	= s16[0xffffb04a + 0x10]
+define p2.position.y.s16	= s16[0xffffb04a + 0x14]
+
+define player1.base_state		= u8[0xffffb000 + 0x05]
+define player2.base_state		= u8[0xffffb04a + 0x05]
+
+define player1.flags			= u8[0xffffb000 + 0x2a]
+define player2.flags			= u8[0xffffb04a + 0x2a]
+
+define player1.rotation			= s8[0xffffb000 + 0x26]
+define player2.rotation			= s8[0xffffb04a + 0x26]
+
+define player1.state			= u8[0xffffb000 + 0x20]
+define player2.state			= u8[0xffffb04a + 0x20]
+
+constant u32 P2.HEROES = 0xffffc2ca
+
+constant u32 P3.HEROES = 0xffffb0de
+
+define u16 Lemons.CustomP2PosBackup = 0x825000

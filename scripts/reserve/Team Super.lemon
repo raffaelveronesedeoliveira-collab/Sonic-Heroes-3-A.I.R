@@ -1,0 +1,153 @@
+// --- Globals ---
+global u8 SecondPlayerTransformingAnimationFinished
+
+// --- Palette Function ---
+function void UpdatePaletteEffects.SuperForm.moddingVersion(u8 characterVersion)
+{
+	if ((super.palettefx.state & 0x80) != 0)
+	{
+		bool isHyperEffect = (super.active == 0xff || super.active.tails == 0xff)
+		u16 nextFrame = (super.palettefx.frame + 6) % (isHyperEffect ? 108 : 18)
+		u16 blendFactor = (super.palettefx.timer * 0x100 / 0x0f)
+
+		if (nextFrame % 18 == 0)
+			blendFactor = 0x100 - blendFactor
+		else if (nextFrame % 18 == 12)
+			blendFactor = 0
+
+		for (u8 i = 0; i < 3; ++i)
+		{
+			u32 slot = (i == 0) ? 0xffffb000 : (i == 1) ? 0xffffb04a : 0xffffc2ca
+			if (u32[slot] == 0)
+				continue
+
+			u8 character = u8[slot + 0x38]
+			for (u8 underwater = 0; underwater < (level.water_present ? 2 : 1); ++underwater)
+			{
+				u32 offset = (character * 0x40) + (underwater ? 0x300 : 0)
+				u32 source = 0x802180 + offset
+				u32 dest   = 0x802000 + offset
+
+				u8 line = 5
+				if (isHyperEffect)
+				{
+					line = 6 + (super.palettefx.frame / 18)
+					if (!System.hasExternalPaletteData(getCharacterPaletteKey(character), line))
+						line = 5
+				}
+
+				zeroMemory(dest, 0x40)
+				u16 numColors = System.loadExternalPaletteData(getCharacterPaletteKey(character), line, 0x800000, 0x20)
+				for (u16 c = 0; c < numColors; ++c)
+				{
+					u32 rgba = u32[0x800000 + c * 4]
+					u16[dest + c * 2] = (rgba & 0xff000000) ? packColorExt(rgba) : 0
+				}
+
+				for (u8 k = 0; k < 0x40; k += 2)
+				{
+					if (u16[dest + k] == 0)
+						u16[dest + k] = u16[source + k]
+					else
+						u16[dest + k] = blendColorsPacked(u16[dest + k], 0x0eee, blendFactor)
+				}
+			}
+		}
+
+		--super.palettefx.timer
+		if (super.palettefx.timer < 0)
+		{
+			super.palettefx.timer = 0x0f
+			super.palettefx.frame = nextFrame
+		}
+	}
+	else if (super.palettefx.state == 1)
+	{
+		super.palettefx.frame = 0
+		super.palettefx.frame.tails = 0
+		super.palettefx.state = 0xff
+		u8[0xffffb02e] = 0
+	}
+}
+
+// --- Behavior Hooks ---
+
+function void Character.TailsAI.Update()
+{
+	A1 = 0xffffb000
+	if ((objA1.state == char.state.TRANSFORMING) && (SecondPlayerTransformingAnimationFinished == 0))
+	{
+		SecondPlayerTransformingAnimationFinished = 1
+		char.state = char.state.TAILS_TRANSFORM
+	}
+
+	if ((char.flags & char.flag.IN_AIR) == 0)
+		SecondPlayerTransformingAnimationFinished = 0
+
+	if (super.active.tails != 0)
+		char.bonus_effect |= char.bonus.INVINCIBLE
+
+	base.Character.TailsAI.Update()
+}
+
+function void Character.UpdateRingsInSuperForm()
+{
+	if (super.active == 0 && super.active.tails == 0)
+		return
+
+	if (hud.dirty.timer != 0)
+	{
+		--super.ring_dec.frames
+		if (super.ring_dec.frames < 0)
+		{
+			super.ring_dec.frames = 60
+			if (ring_counter > 0 && ring_counter != 0xffff)
+			{
+				ring_counter -= 1
+				if (ring_counter == 0)
+					Character.cancelSuperTransformation()
+			}
+		}
+	}
+}
+
+// --- Transformation Function Without Memory Address Errors ---
+function bool Character.performSuperTransformation()
+{
+	if (super.active != 0 || super.active.tails != 0)
+		return false
+
+	if (ring_counter < 50 || hud.dirty.timer == 0 || char.control_flags != 0)
+		return false
+
+	// Define state only. The game engine handles the rest without crashing.
+	if (char.character == CHARACTER_SONIC)
+	{
+		super.active = (global.super_emeralds >= 7) ? 0xff : 1
+		char.state = char.state.TRANSFORMING
+	}
+	else if (char.character == CHARACTER_TAILS)
+	{
+		super.active.tails = (global.super_emeralds >= 7) ? 0xff : 1
+		char.state = char.state.TAILS_TRANSFORM
+	}
+	else if (char.character == CHARACTER_KNUCKLES)
+	{
+		super.active = (global.super_emeralds >= 7) ? 0xff : 1
+		char.state = char.state.TRANSFORMING
+	}
+
+	super.palettefx.state = 1
+	super.palettefx.timer = 0x0f
+	super.ring_dec.frames = 60
+	char.control_flags = 0x81
+
+	// Call speed cap function from the other file
+	setSpeedCapProperties(A4, true)
+
+	char.bonus_effect |= char.bonus.INVINCIBLE
+	playSound(SFX_SUPERTRANSFORM)
+	chooseFittingMusic()
+
+	return true
+}

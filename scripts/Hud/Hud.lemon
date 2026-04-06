@@ -1,0 +1,101 @@
+//# address-hook(0x00db44) end(0x00dbb2)
+function void RenderHUD()
+{
+	// Renderiza o HUD base (Pontuação, Tempo, Anéis)
+	base.RenderHUD()
+
+	// Verifica se o modo de jogo é válido (Fase Normal / Bónus) [cite: 24]
+	if (global.game_mode == 0x08 || global.game_mode == 0x0c)
+	{
+		s16 baseX = global.level_started
+		if (baseX < 0)
+		{
+			baseX += 8
+			global.level_started = baseX
+		}
+		baseX += 0x0f
+
+		// --- LÓGICA DE RENDERIZAÇÃO DE PARCEIROS ---
+		
+		// 1. Verifica o Slot P2 (Geralmente Tails no teu setup) 
+		A0 = P2.HEROES
+		if (objA0.update_address != 0)
+		{
+			drawPartnerHUD(baseX)
+			baseX += 0x10 // Desloca para o próximo ícone não sobrepor
+		}
+
+		// 2. Verifica o Slot Original (0xffffb04a) 
+		A0 = 0xffffb04a
+		if (objA0.update_address != 0)
+		{
+			A1 = 0xffffb000
+			if (objA0.update_address != objA1.update_address)
+			{
+				drawPartnerHUD(baseX)
+			}
+		}
+	}
+}
+
+function void drawPartnerHUD(s16 baseX)
+{
+	// Verifica se o estado de Super ou Hyper está ativo no script Team Super [cite: 1, 5]
+	bool isSuperActive = (super.active != 0 || super.active.tails != 0)
+
+	// Identifica o personagem pelo endereço de atualização 
+	if (objA0.update_address == 0x010a94) // Sonic
+	{
+		// Se estiver Super, usa "sSonicp2". Caso contrário, "Sonicp2" [cite: 25, 26]
+		u64 spriteKey = (isSuperActive) ? "sSonicp2" : "Sonicp2"
+		Renderer.drawCustomSprite(spriteKey, baseX, 0xc9, 0, SPRITE_FLAG_PRIO, 0xffff)
+	}
+	else if (objA0.update_address == 0x01365c) // Tails
+	{
+		// Se estiver Super, usa "sTails". Caso contrário, "Tails" [cite: 25, 26]
+		u64 spriteKey = (isSuperActive) ? "sTails" : "Tails"
+		Renderer.drawCustomSprite(spriteKey, baseX, 0xc9, 0, SPRITE_FLAG_PRIO, 0xffff)
+	}
+	else if (objA0.update_address == 0x016444) // Knuckles
+	{
+		// Se estiver Super, usa "sKnuckles". Caso contrário, "Knuckles" [cite: 25, 26]
+		u64 spriteKey = (isSuperActive) ? "sKnuckles" : "Knuckles"
+		Renderer.drawCustomSprite(spriteKey, baseX, 0xc9, 0, SPRITE_FLAG_PRIO, 0xffff)
+	}
+}
+
+function void Renderer.drawCustomSprite(u64 key, s16 px, s16 py, u8 atex, u8 flags, u16 renderQueue) 
+{
+	// Verifica se o personagem atual (P1) está transformado (Super ou Hyper)
+	if (super.active != 0 || super.active.tails != 0)
+	{
+		u64 key_super = 0
+		
+		// 1. Detecta qual ícone de vida o jogo está tentando desenhar e define o substituto do JSON
+		if (key == "hud_lives_icon_sonic")
+		{
+			key_super = "hud_lives_icon_ssonic"
+		}
+		else if (key == "hud_lives_icon_tails" || key == "hud_lives_icon_miles")
+		{
+			key_super = "hud_lives_icon_stails"
+		}
+		else if (key == "hud_lives_icon_knuckles")
+		{
+			key_super = "hud_lives_icon_sknuckles"
+		}
+
+		// 2. Se encontrou um ícone correspondente, faz a substituição
+		if (key_super != 0)
+		{
+			// Usa a paleta de Super (0x40) e renderiza o sprite do seu JSON
+			u8 atex2 = 0x40
+			base.Renderer.drawCustomSprite(key_super, px, py, atex2, flags, renderQueue)
+			return // Interrompe para não desenhar o ícone normal por baixo
+		}
+		
+	}
+
+	// Desenha normalmente se não houver substituição
+	base.Renderer.drawCustomSprite(key, px, py, atex, flags, renderQueue)
+}

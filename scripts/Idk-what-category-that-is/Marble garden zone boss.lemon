@@ -1,0 +1,104 @@
+//-------------------------------------------------------//
+// Controllable Tails P3 in MGZ 2 boss fight             //
+//-------------------------------------------------------//
+
+//# address-hook(0x0162d8) end(0x016442)
+function void fn0162d8()
+{
+	// Set Robotnik's claw position (Object A0)
+	objA0.position.x.u16 = camera.position.x.u16 + 0x40
+	objA0.position.y.u16 = camera.position.y.u16 + 0x0100
+
+	u32 knux  = 0xffffb04a
+	u32 tails = 0xffffc2ca // Custom TAILSP2 slot
+
+	if (!isMainCharacter(CHARACTER_TAILS))
+	{
+		// 1. DISABLE KNUCKLES (P2) TO PREVENT CRASH
+		// Knuckles cannot fly/carry, so we put him in an inactive state
+		if (u8[knux + 0x38] == CHARACTER_KNUCKLES)
+		{
+			u8[knux + 0x05] = 0x08   // Inactive state
+			u8[knux + 0x01] &= ~0x01  // Invisible 
+		}
+
+		// 2. REDIRECT BOSS LOGIC TO TAILS P3
+		// We point the A1 register (the assistant) to our custom Tails slot
+		A1 = tails 
+		if (s8[A1 + 0x04] >= 0)
+		{
+			objA1.position.x.u16 = objA0.position.x.u16
+			objA1.position.y.u16 = objA0.position.y.u16 - 1
+			
+			// Ensure the object uses the standard Tails update function
+			u32[tails] = 0x01365c 
+
+			tails.ai_routine = 0x12
+			tails.carrying = 0
+			tails.catch_timeout = 0
+
+		#if STANDALONE
+			player2.control_override = 0
+		#endif
+		}
+
+		u16[A0 + 0x30] = 360
+		objA0.update_address = 0x016334
+		fn016334()
+	}
+	else
+	{
+		u16[A0 + 0x30] = 360
+		objA0.update_address = 0x0163f4
+		fn0163f4()
+	}
+}
+
+//# address-hook(0x016340)
+function void fn016340()
+{
+	u32 tails = 0xffffc2ca 
+	if (!tails.carrying)
+	{
+		A1 = 0xffffb000
+		if (objA1.position.y.u16 > objA0.position.y.u16)
+		{
+			objA1.position.y.u16 = objA0.position.y.u16
+			if (tails.ai_routine >= 0x14)
+			{
+				objA0.position.x.u16 = objA1.position.x.u16
+			}
+			objA1.velocity.x = 0
+			objA1.velocity.y = 0
+			objA1.groundspeed = 0
+			u8[A1 + 0x05] = base_state.NORMAL
+			u8[A1 + 0x3d] = 0
+		}
+	}
+
+	if (s8[0xffffb000 + 0x04] >= 0 && u8[0xffffb000 + 0x05] == base_state.NORMAL)
+	{
+		// Set the assistant to Tails P3 here as well
+		A1 = tails 
+	#if STANDALONE
+		if (objA1.position.y.u16 >= 0x0798 && objA1.position.y.u16 < objA0.position.y.u16 - 0x80)
+		{
+			objA1.position.y.u16 = objA0.position.y.u16
+		}
+	#endif
+
+		if (objA1.position.y.u16 > objA0.position.y.u16)
+		{
+			tails.ai_routine = 0x12
+			if (u16[A0 + 0x30] == 0)
+			{
+				objA1.position.x.u16 = objA0.position.x.u16
+				objA1.position.y.u16 = objA0.position.y.u16
+				u8[A1 + 0x05] = base_state.NORMAL
+				u8[A1 + 0x2e] = 0
+				u8[A1 + 0x3d] = 0
+				tails.ai_routine = 0x14
+			}
+		}
+	}
+}
